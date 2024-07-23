@@ -1,0 +1,77 @@
+imageseq = "dir=" + stackDir + " format=JPEG";
+//backslashはmacで動かないかもしれない
+
+File.makeDirectory(stackDir);
+
+list = getFileList(openDir);
+
+for (i = 0; i < list.length; i++) {
+  if (endsWith(list[i], ".oif")) {
+    open(openDir + list[i]);
+    saveAs("TIFF", stackDir + list[i] + ".tif");
+    //waitForUser("(^^)", "Is there any channnel to remove?\nYou dont have to apply LUT.");
+    //change to which cant change, not mordal one
+    //run("Arrange Channels...");
+    
+    Stack.getDimensions(width, height, channels, slices, frames);
+   //LUT適応
+    for ( j = 0; j < channels-1; j++){
+        Stack.setChannel(j+1);
+        run(LUTlist[j]);
+    }
+    
+    //明視野チャンネルの削除
+    Stack.setDisplayMode("composite");
+    Stack.setChannel(channels);
+    run("Delete Slice", "delete=channel");
+       
+    waitForUser("(^^)", "set the interested slice.\nthen put ok.");
+    run("Reduce Dimensionality...", "channels keep");
+    Stack.setDisplayMode("grayscale");
+    run("Image Sequence... ",imageseq);
+    
+    Stack.setDisplayMode("composite");
+    getVoxelSize(Vwidth, Vheight, Vdepth, Vunit);
+    makeLine(getWidth()/2, getHeight()/2, getWidth()/2+10/Vwidth, getHeight()/2, 5);
+    run("Plot Profile");
+    
+    //line選択
+    waitForUser("(^^)", "set the line.\nthen put ok.");
+    roiManager("add")
+    run("Clear Results");
+    Stack.getDimensions(wid, hei, cha, sli, fra);
+    for ( k = 0; k < cha; k++){
+    	Stack.setChannel(k+1);
+    	run("Clear Results");
+    	profile = getProfile();
+    	for (l=0; l<profile.length; l++){
+    		setResult("Value", l, profile[l]);
+    	updateResults;
+    	Plot.create("Profile", "X", "Value", profile);
+  
+  		path = stackDir + "-cha" + k +"-profile.csv";
+  		saveAs("Results", path);
+    	}
+    }
+  }
+}
+    
+    
+    /*if (channels == 4){
+        Stack.setChannel(3);
+        run("Green");
+        Stack.setActiveChannels("1110");
+    }else if (channels == 5){
+        Stack.setChannel(3);
+        run("Green");
+        Stack.setChannel(4);
+        run("Cyan");
+        Stack.setActiveChannels("11110");
+    }else {
+        Stack.setActiveChannels("110");
+    }
+    */
+    
+    
+    //
+    //close();
