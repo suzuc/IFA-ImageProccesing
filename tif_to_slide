@@ -1,0 +1,106 @@
+LUTlist = newArray("Blue", "Magenta", "Green", "Cyan");
+
+openDir = getDirectory("Choose The open folder");
+stackDir = File.getParent(openDir) + "\\stacks\\";
+
+imageseq = "dir=" + stackDir + " format=JPEG";
+//backslashはmacで動かないかもしれない
+
+File.makeDirectory(stackDir);
+
+list = getFileList(openDir);
+
+setLineWidth(5);
+
+for (i = 0; i < list.length; i++) {
+	open(openDir + list[i]);
+
+/*for (i = 0; i < list.length; i++) {
+  if (endsWith(list[i], ".oif")) {
+    open(openDir + list[i]);
+    saveAs("TIFF", stackDir + list[i] + ".tif");
+    
+    Stack.getDimensions(width, height, channels, slices, frames);
+   //LUT適応
+    for ( j = 0; j < channels-1; j++){
+        Stack.setChannel(j+1);
+        run(LUTlist[j]);
+    }
+    */
+    Stack.getDimensions(width, height, channels, slices, frames);
+    //明視野チャンネルの削除
+    Stack.setDisplayMode("composite");
+    Stack.setChannel(channels);
+    run("Delete Slice", "delete=channel");
+    
+    //stack選択
+    waitForUser("popup", "set the interested slice.\nthen put ok.");
+    run("Reduce Dimensionality...", "channels keep");
+    selectWindow(list[i]);
+    close();
+    
+    Stack.setDisplayMode("grayscale");
+    run("Image Sequence... ",imageseq);
+    
+    Stack.setDisplayMode("composite");
+    getVoxelSize(Vwidth, Vheight, Vdepth, Vunit);
+    makeLine(getWidth()/2, getHeight()/2, getWidth()/2+10/Vwidth, getHeight()/2, 5);
+    run("Plot Profile");
+    //line選択
+    waitForUser("(^^)", "set the line.\nthen put ok.");
+    roiManager("add")
+    run("Clear Results");
+    Stack.getDimensions(wid, hei, cha, sli, fra);
+    
+    for ( k = 0; k < cha; k++){
+    	Stack.setChannel(k+1);
+    	run("Clear Results");
+    	profile = getProfile();
+    	
+    	for (l=0; l<profile.length; l++){
+    		setResult("Value", l, profile[l]);
+    	updateResults;
+    	Plot.create("Profile", "X", "Value", profile);
+    	}
+    	csvpath = stackDir + list[i] + "-cha" + k +"-profile.csv";
+  		saveAs("Results", csvpath);
+  		}
+    
+    Stack.setDisplayMode("composite");
+    getLine(linex1, liney1, linex2, liney2, lineWidth);
+    makeRectangle((linex1+linex2)/2-8/Vwidth, (liney1+liney2)/2-8/Vheight, 16/Vwidth, 16/Vwidth);
+    roiManager("add");
+    save(stackDir + list[i] + ".tif");
+    
+    //拡大像取得
+    run("Duplicate...", "duplicate");
+    Stack.setDisplayMode("color");
+    for ( l = 0; l < cha; l++){
+    	Stack.setChannel(l+1);
+    	saveAs("JPEG", stackDir + list[i] + l + ".jpg");
+    }
+    
+    Stack.setDisplayMode("composite");
+    Stack.setActiveChannels("1111");
+    saveAs("JPEG", stackDir + list[i] + "merge" + ".jpg");
+    open(stackDir + list[i] + "merge" + ".jpg");
+    roiManager("Select", 0);
+    run("Fill", "slice");
+    save(stackDir + list[i] + "merge" + ".jpg");
+    close();
+    close();
+    
+    //stack tiff select
+    run("Scale Bar...", "width=10 height=13 thickness=5 font=14 color=White background=None location=[Lower Right] horizontal bold hide overlay");
+    Stack.setActiveChannels("1111");
+    save(stackDir + list[i] +  ".jpg");
+    open(stackDir + list[i] +  ".jpg");
+    roiManager("select", 1);
+    run("Draw", "slice");
+    //roiManager("draw");
+    save(stackDir + list[i] +  ".jpg");
+    
+    close();
+    close();
+    roiManager("reset")
+  }
